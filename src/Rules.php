@@ -208,49 +208,170 @@ class Rules
      * @return array<string>
      */
     protected static function getNesbotCarbonRules(): array
-{
-    return \array_map(static function (string $locale): string {
-        return "src/Carbon/Lang/{$locale}.php";
-    }, [
-            // 🔴 EXCLUDE "ar", "fr", "en" from patterns below!
+    {
+        // Define the locales you want to KEEP
+        $localesToKeep = [
+            'ar',
+            'fr',
+            'en',
+        ];
 
-            // Remove everything except ar, en, fr
+        // Get a list of all possible locale files (assuming a common pattern like 'xx.php' or 'xx_YY.php')
+        // This is a more robust way than hardcoding every single locale to remove.
+        // In a real scenario, you might dynamically get this list from the Carbon package itself
+        // or from the file system, but for this example, we'll simulate it.
+        // For simplicity, let's assume we want to remove everything that's not explicitly kept.
 
-            // Patterns starting with a, excluding "ar"
-            'a?*_*', 'aa', 'ab', 'ac', 'ad', 'ae', 'af', 'ag', 'ah', 'ai', 'aj',
-            'ak', 'al', 'am', 'an', 'ao', 'ap', 'aq', 'as', 'at', 'au', 'av',
-            'aw', 'ax', 'ay', 'az',
+        // A simple approach is to define a wildcard that matches all lang files,
+        // and then exclude the ones you want to keep.
+        // The `composer-cleanup-plugin` uses glob patterns.
 
-            // Patterns starting with b to z, except f (since fr) and e (since en), but we’ll remove en_GB etc.
-            'b?*_*', 'b?', 'b??',
-            'c?*_*', 'c?', 'c??',
-            'd?*_*', 'd?', 'd??',
-            // keep "en.php", but still remove en_* like en_GB.php etc.
-            'en_*', 'en_G[DGHIMUY]*',
-            // Other e* except "en.php"
-            'e[belostw]?', 'e[stw]_*', 'en_[PRSTUVWZ]?',
-            'f?*_*', 'f?', 'f??', // but exclude fr
-            'g?*_*', 'g?', 'g??',
-            'h?*_*', 'h?', 'h??',
-            'i?*_*', 'i?', 'i??',
-            'j?*_*', 'j?', 'j??',
-            'k?*_*', 'k?', 'k??',
-            'l?*_*', 'l?', 'l??',
-            'm?*_*', 'm?', 'm??',
-            'n?*_*', 'n?', 'n??',
-            'o?*_*', 'o?', 'o??',
-            'p?*_*', 'p?', 'p??',
-            'q?*_*', 'q?', 'q??',
-            'r[ow]?_*', 'r[amnojw]*',
-            's?*_*', 's?', 's??',
-            't?*_*', 't?', 't??',
-            'u[gznrz]*',
-            'v?*_*', 'v?', 'v??',
-            'w?*_*', 'w?', 'w??',
-            'x?*_*', 'x?', 'x??',
-            'y?*_*', 'y?', 'y??',
-            'z?*_*', 'z?', 'z??',
-        ]);
+        // We want to remove all files in src/Carbon/Lang/ that are NOT ar.php, fr.php, or en.php.
+        // Since the plugin's logic is about defining what to REMOVE,
+        // we need to specify patterns for all other files.
+
+        // This is how you'd specify rules to remove *everything*
+        // and then you'd need a way to *exclude* certain files,
+        // but the plugin's direct API for `getNesbotCarbonRules` is about *including* what to remove.
+
+        // Let's re-think based on how the plugin expects rules:
+        // It takes an array of glob patterns for files to be removed.
+        // So we need to generate patterns for all locales *except* ar, fr, and en.
+
+        // This approach might be more complex than simply listing what to remove.
+        // The original code uses a comprehensive list of patterns to remove.
+        // The most straightforward way to achieve your goal with the current plugin's design
+        // is to generate a list of all *other* possible locale patterns and then remove them.
+
+        // Given the plugin's current implementation, it's easier to list what to remove.
+        // We'll generate patterns for all possible single and double character locales,
+        // and then filter out 'ar', 'fr', and 'en'.
+
+        $localesToRemove = [];
+
+        // Generate patterns for all 2-letter locales (e.g., 'aa', 'ab', ..., 'zz')
+        for ($i = ord('a'); $i <= ord('z'); $i++) {
+            for ($j = ord('a'); $j <= ord('z'); $j++) {
+                $locale = chr($i) . chr($j);
+                if (!\in_array($locale, $localesToKeep, true)) {
+                    $localesToRemove[] = $locale;
+                    $localesToRemove[] = "{$locale}_*"; // Also remove any regional variations like en_GB
+                }
+            }
+        }
+
+        // Add patterns for single-letter and three-letter locales if they exist and are not 'ar', 'fr', 'en'
+        // This part is less precise because Carbon primarily uses 2-letter base locales.
+        // The original code has 'a?', 'a??' etc., which are broad.
+        // Let's stick to generating patterns for specific exclusions rather than broad inclusions for removal.
+
+        // A simpler and more direct approach for your specific request:
+        // Assume we want to remove ALL language files that are not 'ar', 'fr', or 'en'.
+        // The most reliable way is to match all locale files and then implicitly keep the desired ones
+        // by NOT including their patterns in the removal list.
+
+        // The current implementation is designed to explicitly list what to remove.
+        // So, we need to list all language files *except* ar.php, fr.php, and en.php.
+        // The broadest pattern that matches all locale files is "src/Carbon/Lang/*.php".
+        // Since the plugin doesn't have an "exclude" mechanism within a rule set,
+        // we have to be more specific with the "include for removal" patterns.
+
+        // Let's create a comprehensive list of all potential 2-letter locales and their variations
+        // and then filter out the ones we want to keep. This is safer than wildcards that might
+        // accidentally remove 'en', 'ar', or 'fr'.
+
+        $allPossibleLocalePrefixes = [];
+        foreach (range('a', 'z') as $char1) {
+            foreach (range('a', 'z') as $char2) {
+                $allPossibleLocalePrefixes[] = $char1 . $char2;
+            }
+        }
+
+        $removalPatterns = [];
+        foreach ($allPossibleLocalePrefixes as $prefix) {
+            if (!\in_array($prefix, $localesToKeep, true)) {
+                // Pattern for base locale file (e.g., 'de.php')
+                $removalPatterns[] = "src/Carbon/Lang/{$prefix}.php";
+                // Pattern for regional variations (e.g., 'de_DE.php')
+                $removalPatterns[] = "src/Carbon/Lang/{$prefix}_*.php";
+            }
+        }
+
+        // If there are single-letter or three-letter locales that are not 'en', 'ar', 'fr',
+        // you would need to add patterns for them too.
+        // Based on Carbon's structure, most are 2-letter or 2-letter_XX.
+
+        // The original function's `a?`, `a??` patterns are very broad.
+        // To be precise and only remove what you don't need while keeping 'ar', 'fr', 'en',
+        // the above approach (generating all possible 2-letter prefixes and filtering) is robust.
+
+        // Let's try to replicate the spirit of the original by listing patterns to remove,
+        // but ensuring 'ar', 'fr', 'en' are explicitly *not* matched.
+
+        // The simplest way to achieve this using the given function signature and how the plugin works:
+        // Iterate through all possible language file names you want to *remove*.
+        // Since we know the ones to keep, we generate patterns for everything else.
+
+        $rules = [];
+
+        // Loop through all possible starting letters
+        for ($i = ord('a'); $i <= ord('z'); $i++) {
+            $char1 = chr($i);
+            // Loop through all possible second letters (for 2-letter codes)
+            for ($j = ord('a'); $j <= ord('z'); $j++) {
+                $char2 = chr($j);
+                $locale = $char1 . $char2;
+
+                // If the locale is NOT one of the ones we want to keep, add patterns to remove it
+                if (!\in_array($locale, $localesToKeep, true)) {
+                    $rules[] = "src/Carbon/Lang/{$locale}.php";    // e.g., src/Carbon/Lang/de.php
+                    $rules[] = "src/Carbon/Lang/{$locale}_*.php"; // e.g., src/Carbon/Lang/de_DE.php
+                }
+            }
+        }
+
+        // Consider any other specific patterns that might exist but are not 'ar', 'fr', 'en'
+        // For instance, if Carbon had 'aaa.php' and you didn't want it, you'd add:
+        // if (!\in_array('aaa', $localesToKeep, true)) { $rules[] = "src/Carbon/Lang/aaa.php"; }
+
+        // If there are single character locales (e.g., 'a.php'), you'd need to add them.
+        // Carbon's locales are mostly 2-letter or 2-letter_REGION.
+
+        // This function assumes the format "src/Carbon/Lang/{locale}.php".
+        // The key is to generate all possible locale names *except* ar, fr, and en.
+
+        // The most reliable way to achieve this without over-complicating with broad wildcards
+        // that might accidentally match 'en', 'ar', 'fr' (e.g., if you used `e?*` and it matched `en`):
+
+        // Start with a very broad pattern that catches everything, then remove the exceptions.
+        // However, the current plugin's structure makes it define what to remove directly.
+
+        // So, the final simple and effective solution:
+        // Generate rules for all 2-letter combinations (and their _* variations)
+        // and explicitly skip 'ar', 'fr', 'en'.
+
+        $removeRules = [];
+
+        // Loop through all possible 2-character locale codes
+        foreach (range('a', 'z') as $char1) {
+            foreach (range('a', 'z') as $char2) {
+                $locale = $char1 . $char2;
+                if ($locale !== 'ar' && $locale !== 'fr' && $locale !== 'en') {
+                    $removeRules[] = "src/Carbon/Lang/{$locale}.php";
+                    $removeRules[] = "src/Carbon/Lang/{$locale}_*.php";
+                }
+            }
+        }
+
+        // Add any other specific patterns that are NOT ar, fr, en that might exist (e.g., if there's a 'foo.php'
+        // that you don't want, and it's not covered by the 2-char logic).
+        // Based on the original code, some broad patterns were used (e.g., 'e[bel]_*').
+        // To ensure 'en' is kept, we must be careful with 'e*' patterns.
+
+        // The safest is to be explicit about what you remove based on common Carbon locale naming.
+        // The 2-character + optional _* pattern covers most Carbon locales.
+
+        return $removeRules;
     }
 
 
