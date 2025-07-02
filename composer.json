@@ -1,5 +1,5 @@
 {
-    "name": "avto-dev/composer-cleanup-plugin",
+    "name": "mehdismekouar/composer-cleanup",
     "type": "composer-plugin",
     "description": "A composer cleanup plugin, to remove tests and documentation to save space",
     "license": "MIT",

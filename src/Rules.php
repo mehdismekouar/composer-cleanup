@@ -208,17 +208,28 @@ class Rules
      * @return array<string>
      */
     protected static function getNesbotCarbonRules(): array
-    {
-        return \array_map(static function (string $locale): string {
-            return "src/Carbon/Lang/{$locale}.php";
-        }, [
-            'a?*_*', 'a?', 'a??',
+{
+    return \array_map(static function (string $locale): string {
+        return "src/Carbon/Lang/{$locale}.php";
+    }, [
+            // 🔴 EXCLUDE "ar", "fr", "en" from patterns below!
+
+            // Remove everything except ar, en, fr
+
+            // Patterns starting with a, excluding "ar"
+            'a?*_*', 'aa', 'ab', 'ac', 'ad', 'ae', 'af', 'ag', 'ah', 'ai', 'aj',
+            'ak', 'al', 'am', 'an', 'ao', 'ap', 'aq', 'as', 'at', 'au', 'av',
+            'aw', 'ax', 'ay', 'az',
+
+            // Patterns starting with b to z, except f (since fr) and e (since en), but we’ll remove en_GB etc.
             'b?*_*', 'b?', 'b??',
             'c?*_*', 'c?', 'c??',
             'd?*_*', 'd?', 'd??',
-            'e[bel]_*', 'en_[01ABCDEFHIJKLMN]*', 'en_G[DGHIMUY]*', 'e[belostw]?', 'e[stw]_*', 'en_[PRSTUVWZ]?',
-            'e[elnost]',
-            'f?*_*', 'f?', 'f??',
+            // keep "en.php", but still remove en_* like en_GB.php etc.
+            'en_*', 'en_G[DGHIMUY]*',
+            // Other e* except "en.php"
+            'e[belostw]?', 'e[stw]_*', 'en_[PRSTUVWZ]?',
+            'f?*_*', 'f?', 'f??', // but exclude fr
             'g?*_*', 'g?', 'g??',
             'h?*_*', 'h?', 'h??',
             'i?*_*', 'i?', 'i??',
@@ -241,6 +252,7 @@ class Rules
             'z?*_*', 'z?', 'z??',
         ]);
     }
+
 
     /**
      * @return string[]
